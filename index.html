@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="sidebar">
+    <div id="sidebar" class="hidden">
         <div class="logo">TN Workspace</div>
         <div class="section-title">THƯ MỤC</div>
         <ul class="folder-list" id="folderList"></ul>
@@ -116,7 +116,7 @@
             <button class="btn" style="width: 100%;" onclick="switchView(0)">Quay lại danh sách</button>
         </div>
 
-        <div id="view-5" class="view" style="justify-content: center; align-items: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: rgba(0, 0, 0, 0.4); z-index: 1001;">
+        <div id="view-5" class="view" style="justify-content: center; align-items: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: rgba(0, 0, 0, 0.4); z-index: 3001;">
             <div class="modal-content" style="max-width: 400px; padding: 30px; background: var(--n-bg); border-radius: 8px; border: 1px solid var(--n-border); box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                 <h2 id="confTitle" style="margin-top: 0;">Xác nhận</h2>
                 <p id="confMsg" style="font-size: 16px; margin-bottom: 30px;">Message</p>
@@ -127,7 +127,7 @@
             </div>
         </div>
 
-        <div id="view-9" class="view" style="justify-content: center; align-items: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: rgba(0, 0, 0, 0.4); z-index: 1001;">
+        <div id="view-9" class="view" style="justify-content: center; align-items: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: rgba(0, 0, 0, 0.4); z-index: 3001;">
             <div class="modal-content" style="max-width: 450px; padding: 30px; background: var(--n-bg); border-radius: 8px; border: 1px solid var(--n-border); box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                 <h2 style="color: var(--n-red-bd); margin-top: 0;">⚠️ Trùng tên đề thi</h2>
                 <p id="conflictMsg" style="font-size: 16px; margin-bottom: 25px; line-height: 1.5; color: var(--n-text);"></p>
@@ -166,7 +166,7 @@
             </div>
         </div>
 
-        <div id="view-8" class="view" style="align-items: center; justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: var(--n-bg); z-index: 1000;">
+        <div id="view-8" class="view" style="align-items: center; justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: var(--n-bg); z-index: 2000;">
             <div style="text-align: center;">
                 <h1 style="margin-bottom: 40px; color: var(--n-text); font-size: 32px;">Bạn là ai?</h1>
                 <div class="d-flex nowrap" style="gap: 30px; justify-content: center;">
@@ -180,7 +180,7 @@
             </div>
         </div>
 
-        <div id="view-6" class="view" style="align-items: center; justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: var(--n-bg); z-index: 1000;">
+        <div id="view-6" class="view" style="align-items: center; justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: var(--n-bg); z-index: 2000;">
             <div style="background: var(--n-bg); padding: 40px; border-radius: 8px; border: 1px solid var(--n-border); width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
                 <button class="btn" style="border: none; background: transparent; color: var(--n-muted); text-align: left; padding: 0; margin-bottom: 20px; font-size: 14px; width: 100%;" onclick="switchView(8)">← Quay lại chọn vai trò</button>
                 <h2 id="loginTitle" style="margin-top: 0;">Đăng nhập</h2>
@@ -191,7 +191,7 @@
             </div>
         </div>
 
-        <div id="view-10" class="view" style="align-items: center; justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: rgba(255, 255, 255, 0.85); z-index: 2000;">
+        <div id="view-10" class="view" style="align-items: center; justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: rgba(255, 255, 255, 0.85); z-index: 2500;">
             <div style="text-align: center; background: var(--n-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid var(--n-border); width: 300px;">
                 <div style="font-size: 40px; margin-bottom: 15px;">⏳</div>
                 <h3 style="color: var(--n-primary); margin-top: 0;">Đang xử lý...</h3>

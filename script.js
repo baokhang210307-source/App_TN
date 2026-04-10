@@ -230,12 +230,10 @@ function setupUIAfterLogin() {
     let oldLogoutBtn = document.getElementById('btnLogout');
     if(oldLogoutBtn) oldLogoutBtn.remove();
 
-    const sidebar = document.getElementById('sidebar');
     let shareArea = document.getElementById('shareInputArea');
     let btnToggle = document.getElementById('btnToggleSidebar');
 
     if (currentUser.role === 'admin') {
-        sidebar.classList.add('hidden');
         if(shareArea) shareArea.classList.add('hidden');
         if(btnToggle) btnToggle.classList.add('hidden'); 
 
@@ -250,7 +248,6 @@ function setupUIAfterLogin() {
         let btnBackHome = document.querySelector('#view-7 button');
         if(btnBackHome) btnBackHome.classList.add('hidden');
     } else {
-        sidebar.classList.remove('hidden');
         if(shareArea) shareArea.classList.remove('hidden');
         if(btnToggle) btnToggle.classList.remove('hidden');
     }
@@ -276,6 +273,16 @@ function switchView(idNumber) {
     let btnCreate = document.getElementById('btnCreateExam');
     if(btnCreate) btnCreate.classList.toggle('hidden', !showCreate);
     
+    // Đảm bảo ẩn Sidebar ở màn hình đăng nhập hoặc admin
+    let sidebar = document.getElementById('sidebar');
+    if (idNumber === 8 || idNumber === 6) {
+        sidebar.classList.add('hidden');
+    } else if (currentUser && currentUser.role === 'admin') {
+        sidebar.classList.add('hidden');
+    } else {
+        sidebar.classList.remove('hidden');
+    }
+
     setStatus("Sẵn sàng");
 }
 
