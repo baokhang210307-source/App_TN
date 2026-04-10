@@ -67,7 +67,7 @@ function closeCustomConfirm() {
     document.getElementById('customConfirmModal').classList.add('hidden');
 }
 
-// --- HÀM ẨN/HIỆN SIDEBAR MỚI ---
+// --- HÀM ẨN/HIỆN SIDEBAR ---
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('collapsed');
 }
@@ -234,7 +234,7 @@ function setupUIAfterLogin() {
     if (currentUser.role === 'admin') {
         sidebar.classList.add('hidden');
         if(shareArea) shareArea.classList.add('hidden');
-        if(btnToggle) btnToggle.classList.add('hidden'); // Ẩn luôn nút 3 gạch bên trang Admin
+        if(btnToggle) btnToggle.classList.add('hidden'); 
 
         let adminBtn = document.createElement('button');
         adminBtn.id = 'btnGoAdmin';
@@ -439,10 +439,12 @@ function renderFolders() {
         li.className = `folder-item ${f.id === currentFolderId ? 'active' : ''}`;
         li.innerText = f.name;
         
-        // Khi bấm vào thư mục trên điện thoại thì tự động đóng sidebar lại cho rộng chỗ
+        // Khi click vào thư mục trên điện thoại/iPad sẽ tự động đóng Sidebar lại
         li.onclick = () => {
             selectFolder(f.id);
-            if (window.innerWidth <= 900) document.getElementById('sidebar').classList.add('collapsed');
+            if (window.innerWidth <= 900) {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
         };
         list.appendChild(li);
     });

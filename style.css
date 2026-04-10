@@ -25,14 +25,12 @@ body { margin: 0; display: flex; height: 100vh; background-color: var(--n-bg); c
     flex-direction: column; 
     padding: 15px; 
     box-sizing: border-box; 
-    flex-shrink: 0; /* Giữ nguyên kích thước, không bị bóp méo */
-    transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Hiệu ứng trượt mượt */
-    z-index: 1000;
+    flex-shrink: 0; 
+    transition: transform 0.3s ease, margin-left 0.3s ease; 
+    z-index: 1005;
 }
-/* Class để giấu sidebar sang bên trái */
-#sidebar.collapsed { 
-    margin-left: -260px; 
-}
+/* Thu gọn Sidebar trên máy tính */
+#sidebar.collapsed { margin-left: -260px; }
 
 .logo { font-size: 20px; font-weight: bold; margin-bottom: 20px; }
 .section-title { color: var(--n-muted); font-weight: bold; font-size: 12px; margin-bottom: 10px; }
@@ -59,7 +57,7 @@ button { cursor: pointer; font-family: inherit; font-size: 14px; box-sizing: bor
 #btnToggleSidebar:hover { background-color: var(--n-border); }
 
 /* WORKSPACE */
-#workspace { flex-grow: 1; display: flex; flex-direction: column; padding: 20px 40px; overflow-y: auto; position: relative; box-sizing: border-box; }
+#workspace { flex-grow: 1; display: flex; flex-direction: column; padding: 20px 40px; overflow-y: auto; position: relative; box-sizing: border-box; width: 100%; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid transparent; }
 .status { color: var(--n-muted); font-weight: bold; }
 
@@ -110,17 +108,24 @@ th, td { border-bottom: 1px solid var(--n-border); }
 /* GIAO DIỆN ĐÁP ỨNG (RESPONSIVE) CHO IPAD VÀ ĐIỆN THOẠI          */
 /* ============================================================== */
 
-/* CHO IPAD HOẶC MÀN HÌNH VỪA (Dưới 900px) */
 @media screen and (max-width: 900px) {
-    #workspace { padding: 15px 20px; } /* Giảm viền trống 2 bên */
+    #workspace { padding: 15px 20px; }
     
     /* Biến Sidebar thành ngăn kéo trượt đè lên màn hình */
     #sidebar { 
-        position: absolute; 
+        position: fixed; 
         height: 100vh; 
         left: 0; 
         top: 0; 
-        box-shadow: 4px 0 15px rgba(0,0,0,0.1); 
+        box-shadow: 4px 0 15px rgba(0,0,0,0.2); 
+        margin-left: 0; 
+        transform: translateX(0); /* Trạng thái mở */
+    }
+    
+    /* Trạng thái đóng trên iPad/Mobile */
+    #sidebar.collapsed { 
+        transform: translateX(-100%); 
+        margin-left: 0; 
     }
     
     /* Bẻ dọc khung soạn thảo đề */
@@ -133,23 +138,18 @@ th, td { border-bottom: 1px solid var(--n-border); }
     .nav-grid { grid-template-columns: repeat(8, 1fr); }
 }
 
-/* CHO ĐIỆN THOẠI (Dưới 600px) */
 @media screen and (max-width: 600px) {
     #workspace { padding: 15px; }
-    .d-flex { flex-wrap: wrap; } /* Cho phép rớt dòng nếu thiếu chỗ */
+    .d-flex { flex-wrap: wrap; } 
     .header { flex-wrap: wrap; gap: 10px; }
     .header .status { width: 100%; text-align: left; }
     
-    /* Thanh công cụ tìm kiếm và nút ngang ra */
     #shareInputArea { flex-direction: column !important; align-items: stretch !important; text-align: center; }
     #txtShareLink { margin-bottom: 10px !important; }
     
-    /* Bảng User trượt ngang */
     #userListContainer { overflow-x: auto; }
     table { min-width: 500px; }
     
-    /* Các popup gọn lại */
     .modal-content, #view-6 > div { width: 90% !important; padding: 20px !important; }
-    
     .nav-grid { grid-template-columns: repeat(6, 1fr); }
 }
