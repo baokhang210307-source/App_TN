@@ -29,7 +29,7 @@ body { margin: 0; display: flex; height: 100vh; background-color: var(--n-bg); c
     transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     z-index: 1005;
 }
-/* Trạng thái đóng: Thụt qua trái, đẩy Workspace bung rộng ra */
+/* Trạng thái đóng trên Máy tính: Thụt qua trái, đẩy Workspace bung rộng ra */
 #sidebar.collapsed { margin-left: -260px; }
 
 .logo { font-size: 20px; font-weight: bold; margin-bottom: 20px; }
@@ -48,7 +48,7 @@ button { cursor: pointer; font-family: inherit; font-size: 14px; box-sizing: bor
 .btn-danger { color: var(--n-red-bd); border-color: var(--n-border); }
 .btn-danger:hover { background-color: var(--n-red-bg); border-color: var(--n-red-bd); }
 
-/* NÚT HAMBURGER (☰) */
+/* NÚT HAMBURGER (☰) TRÁI */
 #btnToggleSidebar {
     background: transparent; border: none; font-size: 24px; cursor: pointer;
     padding: 5px 10px; margin-right: 15px; color: var(--n-text); border-radius: 4px;
@@ -57,7 +57,16 @@ button { cursor: pointer; font-family: inherit; font-size: 14px; box-sizing: bor
 #btnToggleSidebar:hover { background-color: var(--n-border); }
 
 /* ================= WORKSPACE (BẢNG LÀM VIỆC CHÍNH) ================= */
-#workspace { flex-grow: 1; display: flex; flex-direction: column; padding: 20px 40px; overflow-y: auto; position: relative; box-sizing: border-box; width: 100%; transition: width 0.3s ease; }
+#workspace { 
+    flex-grow: 1; 
+    min-width: 0; /* LỆNH QUAN TRỌNG NHẤT: Chống tràn viền trên thiết bị di động */
+    display: flex; 
+    flex-direction: column; 
+    padding: 20px 40px; 
+    overflow-y: auto; 
+    position: relative; 
+    box-sizing: border-box; 
+}
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid transparent; }
 .status { color: var(--n-muted); font-weight: bold; }
 
@@ -77,7 +86,7 @@ button { cursor: pointer; font-family: inherit; font-size: 14px; box-sizing: bor
 
 /* ================= QUIZ & SIDEBAR PHẢI (VIEW 2) ================= */
 .quiz-container { display: flex; flex-grow: 1; gap: 20px; position: relative; overflow: hidden; }
-.quiz-main { flex-grow: 1; display: flex; flex-direction: column; }
+.quiz-main { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
 .q-text { font-size: 22px; font-weight: bold; margin: 20px 0; white-space: pre-wrap; line-height: 1.5; }
 .opt-btn { text-align: left; padding: 15px; margin-bottom: 10px; font-size: 16px; font-weight: normal; border-radius: 6px; transition: all 0.2s; width: 100%; box-sizing: border-box; line-height: 1.4; }
 .opt-btn.selected { background-color: #F2F1EE; border: 2px solid var(--n-primary); font-weight: bold; }
@@ -96,13 +105,13 @@ button { cursor: pointer; font-family: inherit; font-size: 14px; box-sizing: bor
     box-sizing: border-box;
     flex-shrink: 0;
 }
-.nav-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; overflow-y: auto; padding-bottom: 10px; }
+.nav-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; overflow-y: auto; padding-bottom: 10px; align-content: start;}
 .nav-btn { height: 40px; padding: 0; font-weight: bold; border-radius: 4px; border: 1px solid var(--n-border); background-color: var(--n-bg); box-sizing: border-box; }
 .nav-btn.done { background-color: #EBEBEA; }
 .nav-btn.current { border: 2px solid var(--n-primary); }
 .nav-btn.flagged { border: 2px solid #E65100; background-color: #FFF3E0; color: #E65100; }
 
-.nav-toggle-btn, .nav-close-btn { display: none; }
+.nav-toggle-btn, .nav-close-btn { display: none !important; }
 
 /* RESULTS (VIEW 3) */
 .res-score { font-size: 48px; font-weight: bold; }
@@ -119,42 +128,14 @@ th, td { border-bottom: 1px solid var(--n-border); }
 
 
 /* ============================================================== */
-/* LƯỚI LỌC KÍCH THƯỚC MÀN HÌNH (IPAD & MOBILE RESPONSIVE)        */
+/* BỘ LƯỚI LỌC KÍCH THƯỚC MÀN HÌNH (IPAD & MOBILE RESPONSIVE)     */
 /* ============================================================== */
 
-/* 1. CHO IPAD VÀ MÀN HÌNH NHỎ (Dưới 1024px) */
+/* 1. CHO IPAD VÀ MÀN HÌNH VỪA (Dưới 1024px) */
 @media screen and (max-width: 1024px) {
     #workspace { padding: 15px 20px; }
     
-    /* Bẻ dọc khung soạn thảo đề */
-    .split-pane { flex-direction: column-reverse; min-height: auto; }
-    #impPreview, #impBody { min-height: 300px; width: 100%; border-right: none; }
-    
-    /* ---- ĐÂY LÀ PHẦN BIẾN KHAY BÊN PHẢI THÀNH NGĂN KÉO ---- */
-    .quiz-nav {
-        position: fixed;
-        top: 0;
-        right: -320px; /* Giấu khỏi màn hình */
-        width: 300px;
-        height: 100vh;
-        border-radius: 0;
-        border: none;
-        border-left: 1px solid var(--n-border);
-        box-shadow: -4px 0 15px rgba(0,0,0,0.1);
-        z-index: 2005;
-        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        background: var(--n-sidebar);
-    }
-    .quiz-nav.open { right: 0; } /* Class để trượt ngăn kéo ra */
-    
-    /* Hiển thị 2 nút bấm đóng mở khay trắc nghiệm */
-    .nav-toggle-btn:not(.hidden), .nav-close-btn:not(.hidden) { display: inline-block !important; }
-    .nav-grid { grid-template-columns: repeat(6, 1fr); }
-}
-
-/* 2. CHO ĐIỆN THOẠI (Dưới 768px) */
-@media screen and (max-width: 768px) {
-    /* Đổi Sidebar trái thành ngăn kéo trượt đè lên màn hình cho đt */
+    /* Biến Sidebar Trái thành ngăn kéo trượt đè lên màn hình */
     #sidebar { 
         position: fixed; 
         height: 100vh; 
@@ -162,15 +143,48 @@ th, td { border-bottom: 1px solid var(--n-border); }
         top: 0; 
         box-shadow: 4px 0 15px rgba(0,0,0,0.2); 
         margin-left: 0; 
-        transform: translateX(0); 
+        transform: translateX(0); /* Trạng thái mở */
         transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
+    
+    /* Trạng thái đóng trên iPad/Mobile: Vuốt văng ra khỏi màn hình */
     #sidebar.collapsed { 
         transform: translateX(-100%); 
         margin-left: 0; 
     }
+    
+    /* Bẻ dọc khung soạn thảo đề */
+    .split-pane { flex-direction: column-reverse; min-height: auto; }
+    #impPreview, #impBody { min-height: 300px; width: 100%; border-right: none; }
+    
+    /* ---- BIẾN KHAY TRẮC NGHIỆM BÊN PHẢI THÀNH NGĂN KÉO ---- */
+    .quiz-nav {
+        position: fixed;
+        top: 0;
+        right: -320px; /* Giấu khỏi màn hình */
+        width: 320px;
+        height: 100vh;
+        border-radius: 0;
+        border: none;
+        border-left: 1px solid var(--n-border);
+        box-shadow: -4px 0 15px rgba(0,0,0,0.2);
+        z-index: 2005;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        background: var(--n-sidebar);
+        margin-top: 0;
+    }
+    .quiz-nav.open { right: 0; } 
+    
+    /* Hiện 2 nút bấm đóng/mở khay trắc nghiệm */
+    .nav-toggle-btn { display: inline-block !important; }
+    .nav-close-btn { display: block !important; }
+    
+    .nav-grid { grid-template-columns: repeat(6, 1fr); }
+}
 
-    #workspace { padding: 15px; width: 100vw; }
+/* 2. CHO ĐIỆN THOẠI (Dưới 768px) */
+@media screen and (max-width: 768px) {
+    #workspace { padding: 15px; }
     .d-flex:not(.nowrap) { flex-wrap: wrap; } 
     .header { flex-wrap: wrap; gap: 10px; }
     .header .status { width: 100%; text-align: left; }
@@ -182,4 +196,8 @@ th, td { border-bottom: 1px solid var(--n-border); }
     table { min-width: 500px; }
     
     .modal-content, #view-6 > div { width: 90% !important; padding: 20px !important; }
+    
+    /* Thu hẹp ngăn kéo phải trên điện thoại bé */
+    .quiz-nav { width: 280px; right: -280px; }
+    .nav-grid { grid-template-columns: repeat(5, 1fr); }
 }

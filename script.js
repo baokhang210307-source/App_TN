@@ -67,12 +67,10 @@ function closeCustomConfirm() {
     document.getElementById('customConfirmModal').classList.add('hidden');
 }
 
-// --- HÀM ẨN/HIỆN SIDEBAR ---
+// --- CÁC HÀM ẨN/HIỆN SIDEBAR CHUẨN ---
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('collapsed');
 }
-
-// --- HÀM MỞ KHAY TIẾN ĐỘ LÀM BÀI TRÊN IPAD ---
 function toggleQuizNav() {
     document.getElementById('quizNavArea').classList.toggle('open');
 }
@@ -92,7 +90,7 @@ function init() {
     let urlParams = new URLSearchParams(window.location.search);
     pendingShareId = urlParams.get('share');
 
-    // Tự động thu gọn Sidebar trái nếu mở trên thiết bị màn hình nhỏ (iPad dọc, Điện thoại)
+    // Mặc định: Màn hình <= 1024px (iPad, Mobile) thì giấu Sidebar trái đi cho gọn
     if (window.innerWidth <= 1024) {
         document.getElementById('sidebar').classList.add('collapsed');
     }
@@ -444,9 +442,9 @@ function renderFolders() {
         li.className = `folder-item ${f.id === currentFolderId ? 'active' : ''}`;
         li.innerText = f.name;
         
-        // Cập nhật: Khi click chọn Folder, nếu màn hình <= 1024 (iPad/Mobile) thì tự thụt vào
         li.onclick = () => {
             selectFolder(f.id);
+            // Khi thao tác trên màn nhỏ (<= 1024px), chọn xong thư mục thì đóng lại luôn cho gọn
             if (window.innerWidth <= 1024) {
                 document.getElementById('sidebar').classList.add('collapsed');
             }
@@ -723,14 +721,8 @@ function startQuiz(mode) {
     document.getElementById('quizNavArea').classList.toggle('hidden', mode === 'practice');
     document.getElementById('btnFlag').classList.toggle('hidden', mode === 'practice');
     
-    // Đóng ngăn kéo khay trắc nghiệm nếu đang mở
+    // Đóng ngăn kéo khay trắc nghiệm phải nếu đang mở
     document.getElementById('quizNavArea').classList.remove('open');
-    
-    let btnToggleNav = document.getElementById('btnToggleNav');
-    if(btnToggleNav) {
-        if(mode === 'practice') btnToggleNav.classList.add('hidden');
-        else btnToggleNav.classList.remove('hidden');
-    }
 
     switchView(2); loadQuestion();
 }
@@ -833,7 +825,7 @@ function renderNavGrid() {
         btn.onclick = () => { 
             quizIndex = i; 
             loadQuestion(); 
-            // Nếu màn hình nhỏ đang mở ngăn kéo thì chọn câu xong đóng lại cho gọn
+            // Nếu màn nhỏ đang mở khay câu hỏi thì chọn xong tự đóng lại
             if(window.innerWidth <= 1024) document.getElementById('quizNavArea').classList.remove('open');
         };
         grid.appendChild(btn);
