@@ -67,13 +67,58 @@ function closeCustomConfirm() {
     document.getElementById('customConfirmModal').classList.add('hidden');
 }
 
-// --- CÁC HÀM ẨN/HIỆN SIDEBAR CHUẨN ---
+// --- HỆ THỐNG MENU DI ĐỘNG & LỚP PHỦ MỜ ---
+function updateOverlay() {
+    let overlay = document.getElementById('mobileOverlay');
+    if (!overlay) return;
+    
+    // Nếu là máy tính màn hình to thì luôn ẩn lớp phủ
+    if (window.innerWidth > 1024) {
+        overlay.classList.add('hidden');
+    } else {
+        // Kiểm tra xem có thanh nào đang mở hay không
+        let sb = document.getElementById('sidebar');
+        let nav = document.getElementById('quizNavArea');
+        let isSbOpen = sb && !sb.classList.contains('collapsed');
+        let isNavOpen = nav && nav.classList.contains('open');
+        
+        // Đảm bảo không hiện lớp phủ lúc đang đăng nhập
+        let isLoginScreen = document.getElementById('view-8').classList.contains('active') || document.getElementById('view-6').classList.contains('active');
+        
+        if ((isSbOpen || isNavOpen) && !isLoginScreen) {
+            overlay.classList.remove('hidden');
+        } else {
+            overlay.classList.add('hidden');
+        }
+    }
+}
+
+function closeAllMenus() {
+    if(window.innerWidth <= 1024) {
+        let sb = document.getElementById('sidebar');
+        if(sb) sb.classList.add('collapsed');
+        
+        let nav = document.getElementById('quizNavArea');
+        if (nav) nav.classList.remove('open');
+        
+        updateOverlay();
+    }
+}
+
 function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('collapsed');
+    let sb = document.getElementById('sidebar');
+    if(sb) sb.classList.toggle('collapsed');
+    updateOverlay();
 }
+
 function toggleQuizNav() {
-    document.getElementById('quizNavArea').classList.toggle('open');
+    let nav = document.getElementById('quizNavArea');
+    if (nav) nav.classList.toggle('open');
+    updateOverlay();
 }
+
+// Lắng nghe sự kiện xoay/xoay ngang dọc màn hình để căn chỉnh lại
+window.addEventListener('resize', updateOverlay);
 
 // --- 3. KHỞI TẠO APP & ĐĂNG NHẬP ---
 function init() {
@@ -90,9 +135,10 @@ function init() {
     let urlParams = new URLSearchParams(window.location.search);
     pendingShareId = urlParams.get('share');
 
-    // Mặc định: Màn hình <= 1024px (iPad, Mobile) thì giấu Sidebar trái đi cho gọn
+    // Mặc định: Màn hình iPad dọc, Mobile thì giấu Sidebar trái đi
     if (window.innerWidth <= 1024) {
-        document.getElementById('sidebar').classList.add('collapsed');
+        let sb = document.getElementById('sidebar');
+        if(sb) sb.classList.add('collapsed');
     }
 
     const savedUser = localStorage.getItem('tn_session');
@@ -230,10 +276,12 @@ function setupUIAfterLogin() {
     let oldLogoutBtn = document.getElementById('btnLogout');
     if(oldLogoutBtn) oldLogoutBtn.remove();
 
+    const sidebar = document.getElementById('sidebar');
     let shareArea = document.getElementById('shareInputArea');
     let btnToggle = document.getElementById('btnToggleSidebar');
 
     if (currentUser.role === 'admin') {
+        sidebar.classList.add('hidden');
         if(shareArea) shareArea.classList.add('hidden');
         if(btnToggle) btnToggle.classList.add('hidden'); 
 
@@ -248,6 +296,7 @@ function setupUIAfterLogin() {
         let btnBackHome = document.querySelector('#view-7 button');
         if(btnBackHome) btnBackHome.classList.add('hidden');
     } else {
+        sidebar.classList.remove('hidden');
         if(shareArea) shareArea.classList.remove('hidden');
         if(btnToggle) btnToggle.classList.remove('hidden');
     }
@@ -261,6 +310,8 @@ function setupUIAfterLogin() {
         location.reload(); 
     };
     header.appendChild(logoutBtn);
+    
+    updateOverlay();
 }
 
 // --- 4. GIAO DIỆN CHUNG ---
@@ -273,7 +324,6 @@ function switchView(idNumber) {
     let btnCreate = document.getElementById('btnCreateExam');
     if(btnCreate) btnCreate.classList.toggle('hidden', !showCreate);
     
-    // Đảm bảo ẩn Sidebar ở màn hình đăng nhập hoặc admin
     let sidebar = document.getElementById('sidebar');
     if (idNumber === 8 || idNumber === 6) {
         sidebar.classList.add('hidden');
@@ -283,6 +333,7 @@ function switchView(idNumber) {
         sidebar.classList.remove('hidden');
     }
 
+    closeAllMenus(); // Tự đóng các ngăn kéo khi chuyển cảnh
     setStatus("Sẵn sàng");
 }
 
@@ -451,10 +502,7 @@ function renderFolders() {
         
         li.onclick = () => {
             selectFolder(f.id);
-            // Khi thao tác trên màn nhỏ (<= 1024px), chọn xong thư mục thì đóng lại luôn cho gọn
-            if (window.innerWidth <= 1024) {
-                document.getElementById('sidebar').classList.add('collapsed');
-            }
+            closeAllMenus(); // Tự động đóng menu nếu mở trên iPad
         };
         list.appendChild(li);
     });
@@ -729,7 +777,9 @@ function startQuiz(mode) {
     document.getElementById('btnFlag').classList.toggle('hidden', mode === 'practice');
     
     // Đóng ngăn kéo khay trắc nghiệm phải nếu đang mở
-    document.getElementById('quizNavArea').classList.remove('open');
+    let navArea = document.getElementById('quizNavArea');
+    if(navArea) navArea.classList.remove('open');
+    updateOverlay();
 
     switchView(2); loadQuestion();
 }
@@ -832,8 +882,7 @@ function renderNavGrid() {
         btn.onclick = () => { 
             quizIndex = i; 
             loadQuestion(); 
-            // Nếu màn nhỏ đang mở khay câu hỏi thì chọn xong tự đóng lại
-            if(window.innerWidth <= 1024) document.getElementById('quizNavArea').classList.remove('open');
+            closeAllMenus(); // Tự động đóng menu nếu đang thao tác trên màn nhỏ
         };
         grid.appendChild(btn);
     });
