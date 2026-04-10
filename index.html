@@ -27,7 +27,11 @@
 
     <div id="workspace">
         <div class="header" id="mainHeader">
-            <div class="status" id="lblStatus">Trạng thái: Sẵn sàng</div>
+            <div class="d-flex" style="align-items: center;">
+                <button id="btnToggleSidebar" onclick="toggleSidebar()" title="Đóng/Mở thư mục">☰</button>
+                <div class="status" id="lblStatus">Trạng thái: Sẵn sàng</div>
+            </div>
+            
             <button class="btn btn-primary" id="btnCreateExam" onclick="showImportView()">⚡ Tạo đề thi mới</button>
         </div>
 
@@ -41,25 +45,19 @@
         </div>
 
         <div id="view-1" class="view" style="position: relative;">
-            
             <div style="border: 1px solid var(--n-border); border-radius: 8px; display: flex; flex-direction: column; flex-grow: 1; background: var(--n-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-                
                 <div style="padding: 15px 20px; border-bottom: 1px solid var(--n-border);">
                     <input type="text" id="impTitle" placeholder="Tên đề thi..." style="width: 100%; border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; color: var(--n-text);">
                 </div>
-
-                <div style="display: flex; flex-grow: 1; min-height: 500px;">
+                <div class="split-pane">
                     <div id="impPreview" style="flex: 1; padding: 20px; overflow-y: auto; border-right: 1px solid var(--n-border); background-color: var(--n-bg);"></div>
-                    
                     <textarea id="impBody" style="flex: 1; padding: 20px; border: none; outline: none; resize: none; font-size: 14px; font-family: inherit; line-height: 1.6; background: transparent; color: var(--n-text);" placeholder="Nhập câu hỏi tại đây... (Ấn Enter để tự điền A, B, C, D)"></textarea>
                 </div>
             </div>
-
             <div class="d-flex" style="position: sticky; bottom: -20px; background: var(--n-bg); padding: 15px 0; margin-top: 15px; border-top: 1px solid var(--n-border); z-index: 10;">
                 <button class="btn btn-primary" style="padding: 10px 20px;" onclick="saveExam()">Lưu lại thay đổi</button>
                 <button class="btn" style="background: var(--n-bg); border: 1px solid var(--n-border); padding: 10px 20px;" onclick="switchView(0)">Hủy thay đổi</button>
             </div>
-            
         </div>
 
         <div id="view-2" class="view">
@@ -94,8 +92,10 @@
             <div><button class="btn btn-primary" onclick="switchView(0)">← Quay lại danh sách</button></div>
             <div class="res-score" id="resScore">0 / 10</div>
             <div class="section-title" id="resCount" style="font-size: 20px; margin-bottom: 20px;">Số câu đúng: 0 / 0</div>
+            
             <button id="btnToggleWrong" class="btn" style="text-align: left; margin-bottom: 10px; color: var(--n-red-bd); border-color: var(--n-red-bd);" onclick="toggleDisplay('wrongList')">▼ Danh sách câu sai</button>
             <div id="wrongList" class="hidden"></div>
+            
             <button id="btnToggleCorrect" class="btn" style="text-align: left; margin-bottom: 10px; color: var(--n-green-bd); border-color: var(--n-green-bd);" onclick="toggleDisplay('correctList')">▼ Danh sách câu đúng</button>
             <div id="correctList" class="hidden"></div>
         </div>

@@ -67,6 +67,11 @@ function closeCustomConfirm() {
     document.getElementById('customConfirmModal').classList.add('hidden');
 }
 
+// --- HÀM ẨN/HIỆN SIDEBAR MỚI ---
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
 // --- 3. KHỞI TẠO APP & ĐĂNG NHẬP ---
 function init() {
     document.getElementById('impBody').addEventListener('keydown', handleSmartEditor);
@@ -81,6 +86,11 @@ function init() {
 
     let urlParams = new URLSearchParams(window.location.search);
     pendingShareId = urlParams.get('share');
+
+    // Tự động thu gọn Sidebar nếu mở trên thiết bị màn hình nhỏ (iPad dọc, Điện thoại)
+    if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.add('collapsed');
+    }
 
     const savedUser = localStorage.getItem('tn_session');
     if (savedUser) {
@@ -219,10 +229,12 @@ function setupUIAfterLogin() {
 
     const sidebar = document.getElementById('sidebar');
     let shareArea = document.getElementById('shareInputArea');
+    let btnToggle = document.getElementById('btnToggleSidebar');
 
     if (currentUser.role === 'admin') {
         sidebar.classList.add('hidden');
         if(shareArea) shareArea.classList.add('hidden');
+        if(btnToggle) btnToggle.classList.add('hidden'); // Ẩn luôn nút 3 gạch bên trang Admin
 
         let adminBtn = document.createElement('button');
         adminBtn.id = 'btnGoAdmin';
@@ -237,6 +249,7 @@ function setupUIAfterLogin() {
     } else {
         sidebar.classList.remove('hidden');
         if(shareArea) shareArea.classList.remove('hidden');
+        if(btnToggle) btnToggle.classList.remove('hidden');
     }
     
     let logoutBtn = document.createElement('button');
@@ -425,7 +438,12 @@ function renderFolders() {
         let li = document.createElement('li');
         li.className = `folder-item ${f.id === currentFolderId ? 'active' : ''}`;
         li.innerText = f.name;
-        li.onclick = () => selectFolder(f.id);
+        
+        // Khi bấm vào thư mục trên điện thoại thì tự động đóng sidebar lại cho rộng chỗ
+        li.onclick = () => {
+            selectFolder(f.id);
+            if (window.innerWidth <= 900) document.getElementById('sidebar').classList.add('collapsed');
+        };
         list.appendChild(li);
     });
     
@@ -703,7 +721,6 @@ function startQuiz(mode) {
 
 function confirmExitQuiz() { showConfirm("Thoát", "Kết quả sẽ không được lưu. Chắc chắn thoát?", "Đồng ý", "exitQuiz", false); }
 
-// --- NÂNG CẤP GIAO DIỆN LÀM BÀI (LINEAR PRACTICE) ---
 function loadQuestion() {
     const q = quizData[quizIndex];
     document.getElementById('lblQText').innerText = `Câu ${quizIndex + 1} / ${quizData.length}:\n\n${q.q}`;
@@ -736,12 +753,10 @@ function loadQuestion() {
     let btnSubmit = document.getElementById('btnSubmitExam');
 
     if (quizMode === 'practice') {
-        // LUYỆN TẬP TUYẾN TÍNH: Ẩn tất cả nút điều hướng
         btnPrev.classList.add('hidden');
         btnNext.classList.add('hidden');
         btnSubmit.classList.add('hidden');
     } else {
-        // LÀM BÀI BÌNH THƯỜNG: Hiện nút điều hướng
         btnPrev.classList.toggle('hidden', quizIndex === 0);
         let isLast = quizIndex === quizData.length - 1;
         btnNext.classList.toggle('hidden', isLast);
@@ -762,7 +777,7 @@ function selectAnswer(i) {
     } else {
         const q = quizData[quizIndex];
         const mapping = ['A','B','C','D'];
-        // Chỉ lưu kết quả của lần chọn ĐẦU TIÊN để chấm điểm sai/đúng
+        
         if (!(quizIndex in userAnswers)) userAnswers[quizIndex] = i;
         
         if (!practiceClicked[quizIndex]) practiceClicked[quizIndex] = new Set();
@@ -773,10 +788,9 @@ function selectAnswer(i) {
             lbl.innerHTML = `<span style="color:var(--n-green-bd)">✓ Chính xác. Đang chuyển câu...</span>`;
             document.querySelectorAll('#optionsContainer .opt-btn').forEach(b => b.disabled = true);
             
-            // Nếu đúng thì tự động chuyển câu, xong câu cuối thì nộp bài luôn
             setTimeout(() => { 
                 if (quizIndex < quizData.length - 1) navigateQ(1); 
-                else executeConfirm('submitExam'); // Tự động nộp
+                else executeConfirm('submitExam'); 
             }, 800);
         } else {
             lbl.innerHTML = `<span style="color:var(--n-red-bd)">✗ Sai rồi. Bạn hãy chọn lại.</span>`;
@@ -847,7 +861,6 @@ function generateResultHTML() {
     document.getElementById('resScore').innerText = `${Number.isInteger(score) ? score : score.toFixed(2)} / 10`;
     document.getElementById('resCount').innerText = `Số câu đúng: ${cCount} / ${quizData.length}`;
     
-    // HIỂN THỊ SỐ LƯỢNG TRÊN NÚT BẤM (YÊU CẦU MỚI)
     document.getElementById('btnToggleWrong').innerText = `▼ Danh sách câu sai (${wCount}/${quizData.length})`;
     document.getElementById('btnToggleCorrect').innerText = `▼ Danh sách câu đúng (${cCount}/${quizData.length})`;
 
