@@ -4,6 +4,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzEt5Quy07evC8GJZO77Fns
 // --- 2. BIẾN TOÀN CỤC ---
 let currentUser = null;
 let pendingShareId = null; 
+let pendingShareFolderId = null; // Biến mới để lưu ID thư mục được chia sẻ
 let pendingExamSave = null; 
 
 let db = { users: [], folders: [], exams: [] };
@@ -29,7 +30,6 @@ function showToast(msg, duration = 0) {
     if(!toast) return;
     toast.innerText = msg;
     toast.classList.remove('hidden');
-    // Ép trình duyệt render lại trước khi cho hiện opacity
     void toast.offsetWidth; 
     toast.style.opacity = 1;
     
@@ -139,6 +139,7 @@ function init() {
 
     let urlParams = new URLSearchParams(window.location.search);
     pendingShareId = urlParams.get('share');
+    pendingShareFolderId = urlParams.get('shareFolder'); // Lấy mã thư mục chia sẻ
 
     if (window.innerWidth <= 1024) {
         let sb = document.getElementById('sidebar');
@@ -169,7 +170,7 @@ async function executeLogin() {
     const errLbl = document.getElementById('loginError');
     if(!user || !pass) { errLbl.innerText = "Vui lòng nhập đủ thông tin!"; return; }
     
-    switchView(10); // Bật Loading khi đăng nhập
+    switchView(10); 
     try {
         let res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: user, password: pass }) });
         let data = await res.json();
@@ -190,6 +191,7 @@ async function executeLogin() {
             } else {
                 switchView(0);
                 if (pendingShareId) handleSharedExam();
+                else if (pendingShareFolderId) handleSharedFolder();
             }
         } else {
             errLbl.innerText = data.error;
@@ -220,6 +222,7 @@ async function silentLoginAndLoadData(userCache) {
             } else {
                 switchView(0);
                 if (pendingShareId) handleSharedExam();
+                else if (pendingShareFolderId) handleSharedFolder();
             }
         } else {
             localStorage.removeItem('tn_session');
@@ -231,9 +234,8 @@ async function silentLoginAndLoadData(userCache) {
     }
 }
 
-// --- BẢN NÂNG CẤP: LƯU DỮ LIỆU NGẦM (BACKGROUND SYNC) ---
 async function saveDBBackground() {
-    showToast("⏳ Đang đồng bộ lên Drive..."); // Bật thông báo góc
+    showToast("⏳ Đang đồng bộ lên Drive..."); 
     try {
         let pullRes = await fetch(API_URL, {
             method: 'POST',
@@ -260,7 +262,7 @@ async function saveDBBackground() {
             method: 'POST',
             body: JSON.stringify({ action: 'sync', role: currentUser.role, db: db })
         });
-        showToast("✅ Đã lưu an toàn!", 3000); // Lưu xong thì báo xanh 3s rồi tự tắt
+        showToast("✅ Đã lưu an toàn!", 3000); 
     } catch(e) {
         showToast("❌ Lỗi đồng bộ! Vui lòng thử lại.", 4000);
     }
@@ -350,13 +352,15 @@ function getActiveViewIndex() {
     return 0;
 }
 
+// ================= LOGIC CHIA SẺ ĐỀ THI VÀ THƯ MỤC ================= //
+
 function shareExam() {
     let baseUrl = window.location.origin + window.location.pathname;
     let link = baseUrl + '?share=' + currentExamId;
     
     if (navigator.clipboard) {
         navigator.clipboard.writeText(link).then(() => {
-            customAlert("Đã copy link chia sẻ thành công!\nHãy dán gửi cho bạn bè để họ nhận đề thi nhé.", "Chia sẻ đề thi");
+            customAlert("Đã copy link chia sẻ đề thi thành công!\nHãy dán gửi cho bạn bè để họ nhận đề thi nhé.", "Chia sẻ đề thi");
         }).catch(() => {
             customPrompt("Hãy copy đường link bên dưới để chia sẻ:", link, "Chia sẻ đề thi", () => {});
         });
@@ -365,26 +369,51 @@ function shareExam() {
     }
 }
 
+function shareFolder() {
+    if (!currentFolderId) return;
+    let baseUrl = window.location.origin + window.location.pathname;
+    let link = baseUrl + '?shareFolder=' + currentFolderId;
+
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(link).then(() => {
+            customAlert("Đã copy link chia sẻ THƯ MỤC thành công!\nHãy gửi cho bạn bè để họ nhận trọn bộ đề thi nhé.", "Chia sẻ thư mục");
+        }).catch(() => {
+            customPrompt("Hãy copy đường link bên dưới để chia sẻ:", link, "Chia sẻ thư mục", () => {});
+        });
+    } else {
+        customPrompt("Hãy copy đường link bên dưới để chia sẻ:", link, "Chia sẻ thư mục", () => {});
+    }
+}
+
 function receiveSharedLink() {
     let link = document.getElementById('txtShareLink').value.trim();
     if (!link) return customAlert("Vui lòng dán link vào ô trống!", "Lỗi");
 
-    let extractedId = null;
+    let extractedShareId = null;
+    let extractedShareFolderId = null;
+    
     try {
         let url = new URL(link);
-        extractedId = url.searchParams.get('share');
+        extractedShareId = url.searchParams.get('share');
+        extractedShareFolderId = url.searchParams.get('shareFolder');
     } catch(e) {
+        // Hỗ trợ trường hợp chỉ copy dán mã ID
         if (link.length > 5 && !link.includes('/')) {
-            extractedId = link;
+            if (db.exams.find(ex => ex.id === link)) extractedShareId = link;
+            else if (db.folders.find(f => f.id === link)) extractedShareFolderId = link;
         }
     }
 
-    if (extractedId) {
-        pendingShareId = extractedId;
+    if (extractedShareId) {
+        pendingShareId = extractedShareId;
         document.getElementById('txtShareLink').value = '';
         handleSharedExam(); 
+    } else if (extractedShareFolderId) {
+        pendingShareFolderId = extractedShareFolderId;
+        document.getElementById('txtShareLink').value = '';
+        handleSharedFolder();
     } else {
-        customAlert("Link không hợp lệ hoặc không chứa mã đề thi!", "Lỗi");
+        customAlert("Link không hợp lệ hoặc không tìm thấy dữ liệu!", "Lỗi");
     }
 }
 
@@ -407,9 +436,35 @@ function handleSharedExam() {
         return;
     }
 
-    showConfirm("Nhận đề thi được chia sẻ", `Bạn vừa nhận được một đề thi: "${sharedExam.name}".\n\nBạn có muốn copy nó vào tài khoản của mình để làm bài không?`, "Nhận Đề Thi", "acceptShare", false);
+    showConfirm("Nhận đề thi được chia sẻ", `Bạn vừa nhận được một đề thi: "${sharedExam.name}".\n\nBạn có muốn nhận nó vào tài khoản của mình để làm bài không?`, "Nhận Đề Thi", "acceptShare", false);
 }
 
+function handleSharedFolder() {
+    let sharedFolder = db.folders.find(f => f.id === pendingShareFolderId);
+    
+    if (!sharedFolder) {
+        customAlert("Rất tiếc! Thư mục này không tồn tại hoặc đã bị xóa mất rồi.", "Lỗi", () => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            pendingShareFolderId = null;
+        });
+        return;
+    }
+
+    if (sharedFolder.owner === currentUser.username) {
+        customAlert("Đây là thư mục của chính bạn rồi mà!", "Thông báo", () => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            pendingShareFolderId = null;
+        });
+        return;
+    }
+
+    let examsInFolder = db.exams.filter(e => e.folderId === sharedFolder.id);
+    let msg = `Bạn vừa nhận được thư mục: "${sharedFolder.name}" (chứa ${examsInFolder.length} đề thi).\n\nBạn có muốn copy toàn bộ vào tài khoản của mình không?`;
+    
+    showConfirm("Nhận thư mục chia sẻ", msg, "Nhận Thư Mục", "acceptShareFolder", false);
+}
+
+// =============================================================== //
 
 function renderUserTable() {
     const tbody = document.getElementById('userTableBody');
@@ -444,7 +499,7 @@ function createNewUser() {
     document.getElementById('newPassword').value = '';
     
     renderUserTable();
-    saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+    saveDBBackground(); 
 }
 
 function editUser(id) {
@@ -453,7 +508,7 @@ function editUser(id) {
         if(newPass && newPass.trim() !== '') {
             user.password = newPass.trim();
             renderUserTable();
-            saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+            saveDBBackground(); 
         }
     });
 }
@@ -466,7 +521,7 @@ function deleteUser(id) {
         db.users = db.users.filter(u => u.id !== id);
         
         renderUserTable();
-        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+        saveDBBackground(); 
     });
 }
 
@@ -494,9 +549,13 @@ function renderFolders() {
     
     if(currentUser && currentUser.role === 'user') {
         document.getElementById('btnDelFolder').classList.toggle('hidden', !currentFolderId);
+        let shareBtn = document.getElementById('btnShareFolder');
+        if(shareBtn) shareBtn.classList.toggle('hidden', !currentFolderId);
         document.getElementById('btnNewFolder').classList.remove('hidden');
     } else {
         document.getElementById('btnDelFolder').classList.add('hidden');
+        let shareBtn = document.getElementById('btnShareFolder');
+        if(shareBtn) shareBtn.classList.add('hidden');
         document.getElementById('btnNewFolder').classList.add('hidden'); 
     }
 }
@@ -520,7 +579,7 @@ function createFolder() {
         
         renderFolders();
         switchView(0); 
-        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+        saveDBBackground(); 
     }
 }
 
@@ -652,7 +711,7 @@ function executeSaveExam(title, qs, overwriteId = null) {
     
     renderExams(); 
     switchView(0); 
-    saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+    saveDBBackground(); 
 }
 
 function executeAcceptShare(sharedExamObj, targetFolderId, newName) {
@@ -663,7 +722,7 @@ function executeAcceptShare(sharedExamObj, targetFolderId, newName) {
     newExam.name = newName;
 
     db.exams.push(newExam);
-    saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+    saveDBBackground(); 
 
     customAlert("Tuyệt vời! Đã copy đề thi vào thư mục của bạn!", "Thành công", () => {
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -691,7 +750,7 @@ function handleConflict(action) {
         if (action === 'overwrite') {
             let targetExam = db.exams.find(e => e.id === p.overwriteId);
             targetExam.questions = JSON.parse(JSON.stringify(p.sharedExamObj.questions));
-            saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+            saveDBBackground(); 
             
             customAlert("Đã ghi đè dữ liệu mới vào đề thi cũ thành công!", "Thành công", () => {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -914,25 +973,66 @@ function generateResultHTML() {
     switchView(3);
 }
 
-function executeConfirm(actionStr = confirmAction) {
+// BỘ XỬ LÝ CHÍNH
+async function executeConfirm(actionStr = confirmAction) {
     if (actionStr === "deleteFolder") {
+        switchView(10); 
         db.folders = db.folders.filter(f => f.id !== currentFolderId);
         db.exams = db.exams.filter(e => e.folderId !== currentFolderId);
         currentFolderId = null; 
         renderFolders(); 
         renderExams(); 
         switchView(0);
-        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+        saveDBBackground(); 
     } else if (actionStr === "deleteExam") {
+        switchView(10); 
         db.exams = db.exams.filter(e => e.id !== currentExamId);
         renderExams(); 
         switchView(0);
-        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
+        saveDBBackground(); 
     } else if (actionStr === "exitQuiz") {
         switchView(0);
     } else if (actionStr === "submitExam") {
         generateResultHTML();
-    } else if (actionStr === "acceptShare") {
+    } 
+    // XỬ LÝ CHIA SẺ THƯ MỤC
+    else if (actionStr === "acceptShareFolder") {
+        let sharedFolder = db.folders.find(f => f.id === pendingShareFolderId);
+        if (sharedFolder) {
+            let examsInFolder = db.exams.filter(e => e.folderId === sharedFolder.id);
+            let folderName = sharedFolder.name;
+            
+            // Giữ nguyên 100% tên thư mục (Nếu trùng tên thì app vẫn cho phép tạo thêm vì ID khác nhau)
+            let newFolderId = generateId();
+            let newFolder = {
+                id: newFolderId,
+                name: folderName,
+                owner: currentUser.username
+            };
+            db.folders.push(newFolder);
+            
+            examsInFolder.forEach(ex => {
+                let newEx = JSON.parse(JSON.stringify(ex));
+                newEx.id = generateId();
+                newEx.folderId = newFolderId;
+                newEx.owner = currentUser.username;
+                db.exams.push(newEx); // Giữ nguyên 100% tên đề thi
+            });
+            
+            switchView(10); 
+            await saveDBBackground(); 
+            
+            customAlert(`Tuyệt vời! Đã copy thành công thư mục "${folderName}" và ${examsInFolder.length} đề thi vào tài khoản của bạn!`, "Thành công", () => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                pendingShareFolderId = null;
+                selectFolder(newFolderId);
+            });
+        } else {
+            switchView(0);
+        }
+    }
+    // XỬ LÝ CHIA SẺ 1 ĐỀ THI
+    else if (actionStr === "acceptShare") {
         let sharedExam = db.exams.find(e => e.id === pendingShareId);
         if (sharedExam) {
             let myFolders = db.folders.filter(f => f.owner === currentUser.username);
