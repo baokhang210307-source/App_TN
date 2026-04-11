@@ -22,7 +22,26 @@ let userAnswers = {};
 let flaggedQs = new Set();
 let practiceClicked = {};
 
-// --- BỘ CÔNG CỤ CUSTOM MODAL ---
+// --- BỘ CÔNG CỤ THÔNG BÁO ---
+let toastTimeout;
+function showToast(msg, duration = 0) {
+    let toast = document.getElementById('toastMsg');
+    if(!toast) return;
+    toast.innerText = msg;
+    toast.classList.remove('hidden');
+    // Ép trình duyệt render lại trước khi cho hiện opacity
+    void toast.offsetWidth; 
+    toast.style.opacity = 1;
+    
+    clearTimeout(toastTimeout);
+    if (duration > 0) {
+        toastTimeout = setTimeout(() => {
+            toast.style.opacity = 0;
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }, duration);
+    }
+}
+
 let cAlertCallback = null;
 function customAlert(msg, title = "Thông báo", callback = null) {
     document.getElementById('cAlertTitle').innerText = title;
@@ -67,29 +86,19 @@ function closeCustomConfirm() {
     document.getElementById('customConfirmModal').classList.add('hidden');
 }
 
-// --- HỆ THỐNG MENU DI ĐỘNG & LỚP PHỦ MỜ ---
 function updateOverlay() {
     let overlay = document.getElementById('mobileOverlay');
     if (!overlay) return;
-    
-    // Nếu là máy tính màn hình to thì luôn ẩn lớp phủ
     if (window.innerWidth > 1024) {
         overlay.classList.add('hidden');
     } else {
-        // Kiểm tra xem có thanh nào đang mở hay không
         let sb = document.getElementById('sidebar');
         let nav = document.getElementById('quizNavArea');
         let isSbOpen = sb && !sb.classList.contains('collapsed');
         let isNavOpen = nav && nav.classList.contains('open');
-        
-        // Đảm bảo không hiện lớp phủ lúc đang đăng nhập
         let isLoginScreen = document.getElementById('view-8').classList.contains('active') || document.getElementById('view-6').classList.contains('active');
-        
-        if ((isSbOpen || isNavOpen) && !isLoginScreen) {
-            overlay.classList.remove('hidden');
-        } else {
-            overlay.classList.add('hidden');
-        }
+        if ((isSbOpen || isNavOpen) && !isLoginScreen) overlay.classList.remove('hidden');
+        else overlay.classList.add('hidden');
     }
 }
 
@@ -97,10 +106,8 @@ function closeAllMenus() {
     if(window.innerWidth <= 1024) {
         let sb = document.getElementById('sidebar');
         if(sb) sb.classList.add('collapsed');
-        
         let nav = document.getElementById('quizNavArea');
         if (nav) nav.classList.remove('open');
-        
         updateOverlay();
     }
 }
@@ -116,8 +123,6 @@ function toggleQuizNav() {
     if (nav) nav.classList.toggle('open');
     updateOverlay();
 }
-
-// Lắng nghe sự kiện xoay/xoay ngang dọc màn hình để căn chỉnh lại
 window.addEventListener('resize', updateOverlay);
 
 // --- 3. KHỞI TẠO APP & ĐĂNG NHẬP ---
@@ -135,7 +140,6 @@ function init() {
     let urlParams = new URLSearchParams(window.location.search);
     pendingShareId = urlParams.get('share');
 
-    // Mặc định: Màn hình iPad dọc, Mobile thì giấu Sidebar trái đi
     if (window.innerWidth <= 1024) {
         let sb = document.getElementById('sidebar');
         if(sb) sb.classList.add('collapsed');
@@ -156,7 +160,6 @@ function goToLogin(role) {
     document.getElementById('loginPass').value = '';
     document.getElementById('loginError').innerText = '';
     switchView(6);
-    
     setTimeout(() => { document.getElementById(role === 'admin' ? 'loginPass' : 'loginUser').focus(); }, 100);
 }
 
@@ -166,19 +169,13 @@ async function executeLogin() {
     const errLbl = document.getElementById('loginError');
     if(!user || !pass) { errLbl.innerText = "Vui lòng nhập đủ thông tin!"; return; }
     
-    errLbl.innerText = "Đang kết nối Drive...";
-    
+    switchView(10); // Bật Loading khi đăng nhập
     try {
-        let res = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'login', username: user, password: pass })
-        });
+        let res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: user, password: pass }) });
         let data = await res.json();
-        
         if (data.success) {
             currentUser = { username: data.username, role: data.role, password: pass };
             localStorage.setItem('tn_session', JSON.stringify(currentUser));
-            
             db.folders = data.folders || [];
             db.exams = data.exams || [];
             if(data.role === 'admin') db.users = data.users || [];
@@ -196,19 +193,18 @@ async function executeLogin() {
             }
         } else {
             errLbl.innerText = data.error;
+            switchView(6);
         }
     } catch (e) {
         errLbl.innerText = "Lỗi kết nối mạng API!";
+        switchView(6);
     }
 }
 
 async function silentLoginAndLoadData(userCache) {
-    setStatus("Đang tải dữ liệu từ Drive...");
+    switchView(10); 
     try {
-        let res = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'login', username: userCache.username, password: userCache.password })
-        });
+        let res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: userCache.username, password: userCache.password }) });
         let data = await res.json();
         if (data.success) {
             db.folders = data.folders || [];
@@ -231,11 +227,13 @@ async function silentLoginAndLoadData(userCache) {
         }
     } catch(e) {
         setStatus("Lỗi mạng, vui lòng tải lại trang.");
+        switchView(8);
     }
 }
 
-async function saveDB() {
-    setStatus("Đang đồng bộ lên Drive...");
+// --- BẢN NÂNG CẤP: LƯU DỮ LIỆU NGẦM (BACKGROUND SYNC) ---
+async function saveDBBackground() {
+    showToast("⏳ Đang đồng bộ lên Drive..."); // Bật thông báo góc
     try {
         let pullRes = await fetch(API_URL, {
             method: 'POST',
@@ -250,7 +248,6 @@ async function saveDB() {
             } else {
                 let otherFolders = (pullData.folders || []).filter(f => f.owner !== currentUser.username);
                 let otherExams = (pullData.exams || []).filter(e => e.owner !== currentUser.username);
-                
                 let myFolders = db.folders.filter(f => f.owner === currentUser.username);
                 let myExams = db.exams.filter(e => e.owner === currentUser.username);
                 
@@ -263,9 +260,9 @@ async function saveDB() {
             method: 'POST',
             body: JSON.stringify({ action: 'sync', role: currentUser.role, db: db })
         });
-        setStatus("Sẵn sàng (Đã lưu Drive)");
+        showToast("✅ Đã lưu an toàn!", 3000); // Lưu xong thì báo xanh 3s rồi tự tắt
     } catch(e) {
-        setStatus("Lỗi đồng bộ!");
+        showToast("❌ Lỗi đồng bộ! Vui lòng thử lại.", 4000);
     }
 }
 
@@ -276,12 +273,10 @@ function setupUIAfterLogin() {
     let oldLogoutBtn = document.getElementById('btnLogout');
     if(oldLogoutBtn) oldLogoutBtn.remove();
 
-    const sidebar = document.getElementById('sidebar');
     let shareArea = document.getElementById('shareInputArea');
     let btnToggle = document.getElementById('btnToggleSidebar');
 
     if (currentUser.role === 'admin') {
-        sidebar.classList.add('hidden');
         if(shareArea) shareArea.classList.add('hidden');
         if(btnToggle) btnToggle.classList.add('hidden'); 
 
@@ -296,7 +291,6 @@ function setupUIAfterLogin() {
         let btnBackHome = document.querySelector('#view-7 button');
         if(btnBackHome) btnBackHome.classList.add('hidden');
     } else {
-        sidebar.classList.remove('hidden');
         if(shareArea) shareArea.classList.remove('hidden');
         if(btnToggle) btnToggle.classList.remove('hidden');
     }
@@ -314,7 +308,6 @@ function setupUIAfterLogin() {
     updateOverlay();
 }
 
-// --- 4. GIAO DIỆN CHUNG ---
 function switchView(idNumber) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     let targetView = document.getElementById('view-' + idNumber);
@@ -325,7 +318,7 @@ function switchView(idNumber) {
     if(btnCreate) btnCreate.classList.toggle('hidden', !showCreate);
     
     let sidebar = document.getElementById('sidebar');
-    if (idNumber === 8 || idNumber === 6) {
+    if (idNumber === 8 || idNumber === 6 || idNumber === 10) {
         sidebar.classList.add('hidden');
     } else if (currentUser && currentUser.role === 'admin') {
         sidebar.classList.add('hidden');
@@ -333,7 +326,7 @@ function switchView(idNumber) {
         sidebar.classList.remove('hidden');
     }
 
-    closeAllMenus(); // Tự đóng các ngăn kéo khi chuyển cảnh
+    closeAllMenus(); 
     setStatus("Sẵn sàng");
 }
 
@@ -357,7 +350,6 @@ function getActiveViewIndex() {
     return 0;
 }
 
-// --- LOGIC CHIA SẺ ĐỀ THI ---
 function shareExam() {
     let baseUrl = window.location.origin + window.location.pathname;
     let link = baseUrl + '?share=' + currentExamId;
@@ -419,7 +411,6 @@ function handleSharedExam() {
 }
 
 
-// --- 5. LOGIC ADMIN (Thêm, Sửa, Xóa User) ---
 function renderUserTable() {
     const tbody = document.getElementById('userTableBody');
     tbody.innerHTML = '';
@@ -439,7 +430,7 @@ function renderUserTable() {
     });
 }
 
-async function createNewUser() {
+function createNewUser() {
     const u = document.getElementById('newUsername').value.trim();
     const p = document.getElementById('newPassword').value.trim();
     if(!u || !p) return customAlert("Vui lòng nhập đủ thông tin!", "Lỗi");
@@ -452,40 +443,33 @@ async function createNewUser() {
     document.getElementById('newUsername').value = '';
     document.getElementById('newPassword').value = '';
     
-    switchView(10); 
-    await saveDB(); 
     renderUserTable();
-    switchView(7); 
+    saveDBBackground(); // LƯU NGẦM SIÊU TỐC
 }
 
-async function editUser(id) {
+function editUser(id) {
     let user = db.users.find(u => u.id === id);
-    customPrompt(`Nhập mật khẩu mới cho user [${user.username}]:`, user.password, "Đổi mật khẩu", async (newPass) => {
+    customPrompt(`Nhập mật khẩu mới cho user [${user.username}]:`, user.password, "Đổi mật khẩu", (newPass) => {
         if(newPass && newPass.trim() !== '') {
             user.password = newPass.trim();
-            switchView(10);
-            await saveDB();
             renderUserTable();
-            switchView(7);
+            saveDBBackground(); // LƯU NGẦM SIÊU TỐC
         }
     });
 }
 
-async function deleteUser(id) {
-    customConfirmUI("Bạn có chắc chắn muốn xóa user này vĩnh viễn?", "Xóa User", async () => {
+function deleteUser(id) {
+    customConfirmUI("Bạn có chắc chắn muốn xóa user này vĩnh viễn?", "Xóa User", () => {
         let userToDel = db.users.find(u => u.id === id);
         db.folders = db.folders.filter(f => f.owner !== userToDel.username);
         db.exams = db.exams.filter(e => e.owner !== userToDel.username);
         db.users = db.users.filter(u => u.id !== id);
         
-        switchView(10);
-        await saveDB();
         renderUserTable();
-        switchView(7);
+        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
     });
 }
 
-// --- 6. LOGIC THƯ MỤC & ĐỀ THI ---
 function renderFolders() {
     const list = document.getElementById('folderList');
     list.innerHTML = '';
@@ -502,7 +486,8 @@ function renderFolders() {
         
         li.onclick = () => {
             selectFolder(f.id);
-            closeAllMenus(); // Tự động đóng menu nếu mở trên iPad
+            if (window.innerWidth <= 1024) document.getElementById('sidebar').classList.add('collapsed');
+            updateOverlay();
         };
         list.appendChild(li);
     });
@@ -522,7 +507,7 @@ function toggleFolderInput() {
     if (currentFolderId) document.getElementById('btnDelFolder').classList.toggle('hidden');
 }
 
-async function createFolder() {
+function createFolder() {
     let name = document.getElementById('txtFolderName').value.trim();
     if (name) {
         let exists = db.folders.find(f => f.owner === currentUser.username && f.name.toLowerCase() === name.toLowerCase());
@@ -533,10 +518,9 @@ async function createFolder() {
         db.folders.push({ id: generateId(), name: name, owner: currentUser.username });
         toggleFolderInput(); 
         
-        switchView(10); 
-        await saveDB();
         renderFolders();
         switchView(0); 
+        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
     }
 }
 
@@ -563,9 +547,8 @@ function renderExams() {
     });
 }
 
-// --- 7. SMART EDITOR & KIỂM TRA TRÙNG TÊN ---
 function showImportView() {
-    if (!currentFolderId) return setStatus("Lỗi: Vui lòng chọn thư mục");
+    if (!currentFolderId) return customAlert("Vui lòng chọn thư mục trước khi tạo đề thi mới.", "Lỗi");
     currentExamId = null;
     document.getElementById('impTitle').value = '';
     document.getElementById('impBody').value = 'Câu 1: ';
@@ -652,9 +635,7 @@ function saveExam() {
     executeSaveExam(title, qs);
 }
 
-async function executeSaveExam(title, qs, overwriteId = null) {
-    switchView(10); 
-
+function executeSaveExam(title, qs, overwriteId = null) {
     if (overwriteId) {
         let ex = db.exams.find(e => e.id === overwriteId);
         ex.questions = qs;
@@ -669,14 +650,12 @@ async function executeSaveExam(title, qs, overwriteId = null) {
         db.exams.push({ id: generateId(), folderId: currentFolderId, name: title, questions: qs, owner: currentUser.username });
     }
     
-    await saveDB(); 
     renderExams(); 
     switchView(0); 
+    saveDBBackground(); // LƯU NGẦM SIÊU TỐC
 }
 
-async function executeAcceptShare(sharedExamObj, targetFolderId, newName) {
-    switchView(10); 
-
+function executeAcceptShare(sharedExamObj, targetFolderId, newName) {
     let newExam = JSON.parse(JSON.stringify(sharedExamObj));
     newExam.id = generateId();
     newExam.folderId = targetFolderId;
@@ -684,7 +663,7 @@ async function executeAcceptShare(sharedExamObj, targetFolderId, newName) {
     newExam.name = newName;
 
     db.exams.push(newExam);
-    await saveDB(); 
+    saveDBBackground(); // LƯU NGẦM SIÊU TỐC
 
     customAlert("Tuyệt vời! Đã copy đề thi vào thư mục của bạn!", "Thành công", () => {
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -693,14 +672,13 @@ async function executeAcceptShare(sharedExamObj, targetFolderId, newName) {
     });
 }
 
-// --- BẢNG ĐIỀU KHIỂN TRÙNG TÊN ---
-async function handleConflict(action) {
+function handleConflict(action) {
     let p = pendingExamSave;
     pendingExamSave = null; 
 
     if (p.source === 'editor') {
         if (action === 'overwrite') {
-            await executeSaveExam(p.title, p.qs, p.overwriteId);
+            executeSaveExam(p.title, p.qs, p.overwriteId);
         } else if (action === 'rename') {
             switchView(1); 
             document.getElementById('impTitle').value = p.title + " (Bản mới)";
@@ -711,10 +689,9 @@ async function handleConflict(action) {
     } 
     else if (p.source === 'share') {
         if (action === 'overwrite') {
-            switchView(10); 
             let targetExam = db.exams.find(e => e.id === p.overwriteId);
             targetExam.questions = JSON.parse(JSON.stringify(p.sharedExamObj.questions));
-            await saveDB();
+            saveDBBackground(); // LƯU NGẦM SIÊU TỐC
             
             customAlert("Đã ghi đè dữ liệu mới vào đề thi cũ thành công!", "Thành công", () => {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -722,9 +699,9 @@ async function handleConflict(action) {
                 selectFolder(p.targetFolderId);
             });
         } else if (action === 'rename') {
-            customPrompt("Vui lòng nhập tên mới cho đề thi:", p.title + " (Bản mới)", "Đổi tên đề thi", async (userInputName) => {
+            customPrompt("Vui lòng nhập tên mới cho đề thi:", p.title + " (Bản mới)", "Đổi tên đề thi", (userInputName) => {
                 if (userInputName && userInputName.trim() !== "") {
-                    await executeAcceptShare(p.sharedExamObj, p.targetFolderId, userInputName.trim());
+                    executeAcceptShare(p.sharedExamObj, p.targetFolderId, userInputName.trim());
                 } else {
                     window.history.replaceState({}, document.title, window.location.pathname);
                     pendingShareId = null;
@@ -739,13 +716,11 @@ async function handleConflict(action) {
     }
 }
 
-// --- 8. MENU & QUIZ LÀM BÀI ---
 function openMenu(exam) {
     currentExamId = exam.id;
     document.getElementById('menuTitle').innerText = exam.name;
     
     let isAppUser = (currentUser && currentUser.role === 'user');
-    
     let btnEdit = document.getElementById('btnEditExam');
     let btnDel = document.getElementById('btnDelExam');
     let btnShare = document.getElementById('btnShareExam');
@@ -776,7 +751,6 @@ function startQuiz(mode) {
     document.getElementById('quizNavArea').classList.toggle('hidden', mode === 'practice');
     document.getElementById('btnFlag').classList.toggle('hidden', mode === 'practice');
     
-    // Đóng ngăn kéo khay trắc nghiệm phải nếu đang mở
     let navArea = document.getElementById('quizNavArea');
     if(navArea) navArea.classList.remove('open');
     updateOverlay();
@@ -882,13 +856,15 @@ function renderNavGrid() {
         btn.onclick = () => { 
             quizIndex = i; 
             loadQuestion(); 
-            closeAllMenus(); // Tự động đóng menu nếu đang thao tác trên màn nhỏ
+            if(window.innerWidth <= 1024) {
+                document.getElementById('quizNavArea').classList.remove('open');
+                updateOverlay();
+            }
         };
         grid.appendChild(btn);
     });
 }
 
-// --- 9. RESULTS SCREEN ---
 function confirmSubmitExam() {
     if (quizMode === 'test') {
         let unanswered = quizData.length - Object.keys(userAnswers).length;
@@ -938,23 +914,20 @@ function generateResultHTML() {
     switchView(3);
 }
 
-// --- 10. ACTIONS EXECUTOR ---
-async function executeConfirm(actionStr = confirmAction) {
+function executeConfirm(actionStr = confirmAction) {
     if (actionStr === "deleteFolder") {
-        switchView(10); 
         db.folders = db.folders.filter(f => f.id !== currentFolderId);
         db.exams = db.exams.filter(e => e.folderId !== currentFolderId);
         currentFolderId = null; 
-        await saveDB();
         renderFolders(); 
         renderExams(); 
         switchView(0);
+        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
     } else if (actionStr === "deleteExam") {
-        switchView(10); 
         db.exams = db.exams.filter(e => e.id !== currentExamId);
-        await saveDB();
         renderExams(); 
         switchView(0);
+        saveDBBackground(); // LƯU NGẦM SIÊU TỐC
     } else if (actionStr === "exitQuiz") {
         switchView(0);
     } else if (actionStr === "submitExam") {
@@ -986,7 +959,7 @@ async function executeConfirm(actionStr = confirmAction) {
                 return; 
             }
 
-            await executeAcceptShare(sharedExam, shareFolder.id, copyName);
+            executeAcceptShare(sharedExam, shareFolder.id, copyName);
         } else {
             switchView(0);
         }

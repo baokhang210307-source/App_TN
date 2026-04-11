@@ -173,8 +173,7 @@
         <div id="view-10" class="view" style="align-items: center; justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100vw; background: rgba(255, 255, 255, 0.85); z-index: 2500;">
             <div style="text-align: center; background: var(--n-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid var(--n-border); width: 300px;">
                 <div style="font-size: 40px; margin-bottom: 15px;">⏳</div>
-                <h3 style="color: var(--n-primary); margin-top: 0;">Đang xử lý...</h3>
-                <p style="color: var(--n-muted); margin-bottom: 0; font-size: 14px;">Vui lòng không đóng trang</p>
+                <h3 style="color: var(--n-primary); margin-top: 0;">Đang tải dữ liệu...</h3>
             </div>
         </div>
 
@@ -233,6 +232,9 @@
         </div>
 
     </div>
+
+    <div id="toastMsg" class="hidden" style="position: fixed; bottom: 20px; right: 20px; background: var(--n-primary); color: white; padding: 12px 24px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: bold; font-size: 14px; transition: opacity 0.3s; opacity: 0;">Đang xử lý...</div>
+
     <script src="script.js"></script>
 </body>
 </html>
