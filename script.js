@@ -22,6 +22,7 @@ let quizMode = 'test';
 let userAnswers = {};
 let flaggedQs = new Set();
 let practiceClicked = {};
+let isTransitioning = false; // CỜ CHỐNG SPAM CLICK KHI CHUYỂN CÂU
 
 // ================= CÔNG CỤ DỊCH CÔNG THỨC TOÁN (MATHJAX) =================
 let mathJaxPromise = Promise.resolve();
@@ -786,6 +787,8 @@ function handleConflict(action) {
         }
     } 
     else if (p.source === 'share') {
+        switchView(0); // ĐÓNG BẢNG VIEW-9 LẠI TRƯỚC KHI XỬ LÝ TIẾP
+        
         if (action === 'overwrite') {
             let targetExam = db.exams.find(e => e.id === p.overwriteId);
             targetExam.questions = JSON.parse(JSON.stringify(p.sharedExamObj.questions));
@@ -845,6 +848,7 @@ function confirmDeleteExam() { showConfirm("Xóa đề thi", "Chắc chắn mu�
 function startQuiz(mode) {
     quizMode = mode; quizData = db.exams.find(e => e.id === currentExamId).questions;
     quizIndex = 0; userAnswers = {}; flaggedQs.clear(); practiceClicked = {};
+    isTransitioning = false; // BẢO ĐẢM CỜ ĐƯỢC RESET MỖI LẦN VÀO LÀM BÀI MỚI
     
     document.getElementById('quizNavArea').classList.toggle('hidden', mode === 'practice');
     document.getElementById('btnFlag').classList.toggle('hidden', mode === 'practice');
@@ -911,6 +915,8 @@ function loadQuestion() {
 }
 
 function selectAnswer(i) {
+    if (isTransitioning) return; // NẾU ĐANG CHUYỂN CÂU THÌ VÔ HIỆU HÓA MỌI CÚ CLICK
+
     if (quizMode === 'test') {
         userAnswers[quizIndex] = i;
         loadQuestion();
@@ -925,10 +931,13 @@ function selectAnswer(i) {
         
         let lbl = document.getElementById('lblFeedback');
         if (mapping[i] === q.a) {
+            isTransitioning = true; // BẬT CỜ CHỐNG SPAM CLICK
+            
             lbl.innerHTML = `<span style="color:var(--n-green-bd)">✓ Chính xác. Đang chuyển câu...</span>`;
             document.querySelectorAll('#optionsContainer .opt-btn').forEach(b => b.disabled = true);
             
             setTimeout(() => { 
+                isTransitioning = false; // MỞ KHÓA CLICK SAU KHI ĐÃ ĐẾM XONG 800MS
                 if (quizIndex < quizData.length - 1) navigateQ(1); 
                 else executeConfirm('submitExam'); 
             }, 800);
@@ -1062,6 +1071,9 @@ async function executeConfirm(actionStr = confirmAction) {
             
             saveDBBackground(); 
             
+            // ĐÓNG BẢNG XÁC NHẬN VIEW-5 TRƯỚC KHI HIỂN THỊ ALERT
+            switchView(0);
+            
             customAlert(`Tuyệt vời! Đã copy thành công thư mục "${folderName}" và ${examsInFolder.length} đề thi vào tài khoản của bạn!`, "Thành công", () => {
                 window.history.replaceState({}, document.title, window.location.pathname);
                 pendingShareFolderId = null;
@@ -1097,6 +1109,9 @@ async function executeConfirm(actionStr = confirmAction) {
                 switchView(9);
                 return; 
             }
+
+            // ĐÓNG BẢNG XÁC NHẬN VIEW-5 TRƯỚC KHI HIỂN THỊ ALERT
+            switchView(0);
 
             executeAcceptShare(sharedExam, shareFolder.id, copyName);
         } else {
