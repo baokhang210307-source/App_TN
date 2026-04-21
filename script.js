@@ -642,18 +642,40 @@ function handleSmartEditor(e) {
 }
 
 function parseFormat(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
     let qs = [];
-    for (let i = 0; i < lines.length; i += 6) {
+    // Cắt văn bản thành từng khối mỗi khi gặp chữ "Câu" ở đầu dòng
+    let blocks = text.split(/(?=(?:^|\n)\s*Câu\s*\d+[:\.])/i);
+    
+    blocks.forEach(block => {
+        let b = block.trim();
+        if (!b) return;
+        
         try {
-            if (i + 5 >= lines.length) break;
-            let qText = lines[i].replace(/^Câu\s*\d+[:\.]\s*/i, "").trim();
-            let opts = lines.slice(i+1, i+5).map(opt => opt.replace(/^[A-D][:\.]\s*/i, "").trim());
-            let ansLine = lines[i+5].toUpperCase();
-            let ans = ansLine.match(/([A-D])$/)?.[1] || "";
-            if (['A', 'B', 'C', 'D'].includes(ans)) qs.push({ q: qText, o: opts, a: ans });
-        } catch (e) { break; }
-    }
+            // Dùng RegEx quét thông minh, cho phép rớt dòng thoải mái
+            let qMatch = b.match(/(?:^|\n)\s*Câu\s*\d+\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*A\s*[:\.])/i);
+            let oA = b.match(/(?:^|\n)\s*A\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*B\s*[:\.])/i);
+            let oB = b.match(/(?:^|\n)\s*B\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*C\s*[:\.])/i);
+            let oC = b.match(/(?:^|\n)\s*C\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*D\s*[:\.])/i);
+            let oD = b.match(/(?:^|\n)\s*D\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*đáp án\s*[:\.])/i);
+            let aMatch = b.match(/(?:^|\n)\s*đáp án\s*[:\.]\s*([A-D])/i);
+            
+            if (qMatch && oA && oB && oC && oD && aMatch) {
+                qs.push({
+                    // .replace(/\n/g, " ") giúp nối các dòng bị đứt gãy lại thành 1 câu liền mạch
+                    q: qMatch[1].trim().replace(/\n/g, " "), 
+                    o: [
+                        oA[1].trim().replace(/\n/g, " "), 
+                        oB[1].trim().replace(/\n/g, " "), 
+                        oC[1].trim().replace(/\n/g, " "), 
+                        oD[1].trim().replace(/\n/g, " ")
+                    ],
+                    a: aMatch[1].toUpperCase()
+                });
+            }
+        } catch(e) {
+            console.error("Lỗi khi đọc câu hỏi: ", e);
+        }
+    });
     return qs;
 }
 
