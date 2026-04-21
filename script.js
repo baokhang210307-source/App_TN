@@ -4,7 +4,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzEt5Quy07evC8GJZO77Fns
 // --- 2. BIẾN TOÀN CỤC ---
 let currentUser = null;
 let pendingShareId = null; 
-let pendingShareFolderId = null; // Biến mới để lưu ID thư mục được chia sẻ
+let pendingShareFolderId = null; 
 let pendingExamSave = null; 
 
 let db = { users: [], folders: [], exams: [] };
@@ -22,6 +22,16 @@ let quizMode = 'test';
 let userAnswers = {};
 let flaggedQs = new Set();
 let practiceClicked = {};
+
+// ================= CÔNG CỤ DỊCH CÔNG THỨC TOÁN (MATHJAX) =================
+let mathJaxPromise = Promise.resolve();
+function renderMath(elements) {
+    if (window.MathJax) {
+        mathJaxPromise = mathJaxPromise.then(() => {
+            return MathJax.typesetPromise(elements).catch((err) => console.log('Lỗi MathJax:', err.message));
+        });
+    }
+}
 
 // --- BỘ CÔNG CỤ THÔNG BÁO ---
 let toastTimeout;
@@ -139,7 +149,7 @@ function init() {
 
     let urlParams = new URLSearchParams(window.location.search);
     pendingShareId = urlParams.get('share');
-    pendingShareFolderId = urlParams.get('shareFolder'); // Lấy mã thư mục chia sẻ
+    pendingShareFolderId = urlParams.get('shareFolder'); 
 
     if (window.innerWidth <= 1024) {
         let sb = document.getElementById('sidebar');
@@ -397,7 +407,6 @@ function receiveSharedLink() {
         extractedShareId = url.searchParams.get('share');
         extractedShareFolderId = url.searchParams.get('shareFolder');
     } catch(e) {
-        // Hỗ trợ trường hợp chỉ copy dán mã ID
         if (link.length > 5 && !link.includes('/')) {
             if (db.exams.find(ex => ex.id === link)) extractedShareId = link;
             else if (db.folders.find(f => f.id === link)) extractedShareFolderId = link;
@@ -606,6 +615,8 @@ function renderExams() {
     });
 }
 
+// ================= BỘ MÁY NHẬN DIỆN VĂN BẢN ================= //
+
 function showImportView() {
     if (!currentFolderId) return customAlert("Vui lòng chọn thư mục trước khi tạo đề thi mới.", "Lỗi");
     currentExamId = null;
@@ -626,12 +637,12 @@ function handleSmartEditor(e) {
         
         let injection = "\n";
         if (currentLine.startsWith("CÂU") && currentLine.includes(":")) injection += "A. ";
-        else if (currentLine.startsWith("A.")) injection += "B. ";
-        else if (currentLine.startsWith("B.")) injection += "C. ";
-        else if (currentLine.startsWith("C.")) injection += "D. ";
-        else if (currentLine.startsWith("D.")) injection += "Đáp án: ";
-        else if (currentLine.startsWith("ĐÁP ÁN:")) {
-            const count = (text.toUpperCase().match(/ĐÁP ÁN:/g) || []).length;
+        else if (currentLine.startsWith("A.") || currentLine.startsWith("A:")) injection += "B. ";
+        else if (currentLine.startsWith("B.") || currentLine.startsWith("B:")) injection += "C. ";
+        else if (currentLine.startsWith("C.") || currentLine.startsWith("C:")) injection += "D. ";
+        else if (currentLine.startsWith("D.") || currentLine.startsWith("D:")) injection += "Đáp án: ";
+        else if (currentLine.includes("ĐÁP ÁN") || currentLine.includes("KẾT QUẢ") || currentLine.includes("DAP AN") || currentLine.includes("KQ")) {
+            const count = (text.toUpperCase().match(/CÂU/g) || []).length;
             injection += `\nCâu ${count + 1}: `;
         }
         
@@ -643,25 +654,27 @@ function handleSmartEditor(e) {
 
 function parseFormat(text) {
     let qs = [];
-    // Cắt văn bản thành từng khối mỗi khi gặp chữ "Câu" ở đầu dòng
-    let blocks = text.split(/(?=(?:^|\n)\s*Câu\s*\d+[:\.])/i);
+    let blocks = text.split(/(?=(?:^|\n)\s*Câu\s*\d+[\.\:\-]?\s*)/i);
     
     blocks.forEach(block => {
         let b = block.trim();
         if (!b) return;
         
         try {
-            // Dùng RegEx quét thông minh, cho phép rớt dòng thoải mái
-            let qMatch = b.match(/(?:^|\n)\s*Câu\s*\d+\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*A\s*[:\.])/i);
-            let oA = b.match(/(?:^|\n)\s*A\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*B\s*[:\.])/i);
-            let oB = b.match(/(?:^|\n)\s*B\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*C\s*[:\.])/i);
-            let oC = b.match(/(?:^|\n)\s*C\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*D\s*[:\.])/i);
-            let oD = b.match(/(?:^|\n)\s*D\s*[:\.]\s*([\s\S]*?)(?=(?:^|\n)\s*đáp án\s*[:\.])/i);
-            let aMatch = b.match(/(?:^|\n)\s*đáp án\s*[:\.]\s*([A-D])/i);
+            let qMatch = b.match(/(?:^|\n)\s*Câu\s*\d+\s*[\.\:\-]?\s*([\s\S]*?)(?=(?:^|\n)\s*A\s*[\.\:\-]\s*)/i);
+            let oA = b.match(/(?:^|\n)\s*A\s*[\.\:\-]\s*([\s\S]*?)(?=(?:^|\n)\s*B\s*[\.\:\-]\s*)/i);
+            let oB = b.match(/(?:^|\n)\s*B\s*[\.\:\-]\s*([\s\S]*?)(?=(?:^|\n)\s*C\s*[\.\:\-]\s*)/i);
+            let oC = b.match(/(?:^|\n)\s*C\s*[\.\:\-]\s*([\s\S]*?)(?=(?:^|\n)\s*D\s*[\.\:\-]\s*)/i);
             
-            if (qMatch && oA && oB && oC && oD && aMatch) {
+            let oD = b.match(/(?:^|\n)\s*D\s*[\.\:\-]\s*([\s\S]*?)(?=(?:^|\n)\s*(?:đáp án|kết quả|dap an|kq))/i);
+            if (!oD) {
+                oD = b.match(/(?:^|\n)\s*D\s*[\.\:\-]\s*([\s\S]*)$/i);
+            }
+            
+            let aMatch = b.match(/(?:^|\n)\s*(?:đáp án|kết quả|dap an|kq)[^\n]*?\b([A-D])\b/i);
+            
+            if (qMatch && oA && oB && oC && oD) {
                 qs.push({
-                    // .replace(/\n/g, " ") giúp nối các dòng bị đứt gãy lại thành 1 câu liền mạch
                     q: qMatch[1].trim().replace(/\n/g, " "), 
                     o: [
                         oA[1].trim().replace(/\n/g, " "), 
@@ -669,7 +682,7 @@ function parseFormat(text) {
                         oC[1].trim().replace(/\n/g, " "), 
                         oD[1].trim().replace(/\n/g, " ")
                     ],
-                    a: aMatch[1].toUpperCase()
+                    a: aMatch ? aMatch[1].toUpperCase() : "" 
                 });
             }
         } catch(e) {
@@ -679,6 +692,7 @@ function parseFormat(text) {
     return qs;
 }
 
+// Hàm này gọi MathJax để dịch Toán sau khi điền câu hỏi
 function updateLivePreview() {
     const text = document.getElementById('impBody').value;
     const qs = parseFormat(text);
@@ -693,6 +707,9 @@ function updateLivePreview() {
         html += '<hr>';
     });
     document.getElementById('impPreview').innerHTML = html;
+    
+    // Yêu cầu dịch Toán bên màn Xem Trước
+    renderMath([document.getElementById('impPreview')]);
 }
 
 function saveExam() {
@@ -888,6 +905,9 @@ function loadQuestion() {
         btnFlag.className = "btn" + (isFlagged ? " nav-btn flagged" : "");
         renderNavGrid();
     }
+    
+    // Yêu cầu dịch Toán trên màn Làm Bài
+    renderMath([document.getElementById('lblQText'), document.getElementById('optionsContainer')]);
 }
 
 function selectAnswer(i) {
@@ -992,13 +1012,15 @@ function generateResultHTML() {
 
     document.getElementById('wrongList').innerHTML = wHtml || '<p>Tuyệt vời, không sai câu nào!</p>';
     document.getElementById('correctList').innerHTML = cHtml || '<p>Chưa có câu đúng.</p>';
+    
     switchView(3);
+    
+    // Yêu cầu dịch Toán trên màn Báo Cáo Kết Quả
+    renderMath([document.getElementById('wrongList'), document.getElementById('correctList')]);
 }
 
-// BỘ XỬ LÝ CHÍNH
 async function executeConfirm(actionStr = confirmAction) {
     if (actionStr === "deleteFolder") {
-        switchView(10); 
         db.folders = db.folders.filter(f => f.id !== currentFolderId);
         db.exams = db.exams.filter(e => e.folderId !== currentFolderId);
         currentFolderId = null; 
@@ -1007,7 +1029,6 @@ async function executeConfirm(actionStr = confirmAction) {
         switchView(0);
         saveDBBackground(); 
     } else if (actionStr === "deleteExam") {
-        switchView(10); 
         db.exams = db.exams.filter(e => e.id !== currentExamId);
         renderExams(); 
         switchView(0);
@@ -1017,14 +1038,12 @@ async function executeConfirm(actionStr = confirmAction) {
     } else if (actionStr === "submitExam") {
         generateResultHTML();
     } 
-    // XỬ LÝ CHIA SẺ THƯ MỤC
     else if (actionStr === "acceptShareFolder") {
         let sharedFolder = db.folders.find(f => f.id === pendingShareFolderId);
         if (sharedFolder) {
             let examsInFolder = db.exams.filter(e => e.folderId === sharedFolder.id);
             let folderName = sharedFolder.name;
             
-            // Giữ nguyên 100% tên thư mục (Nếu trùng tên thì app vẫn cho phép tạo thêm vì ID khác nhau)
             let newFolderId = generateId();
             let newFolder = {
                 id: newFolderId,
@@ -1038,11 +1057,10 @@ async function executeConfirm(actionStr = confirmAction) {
                 newEx.id = generateId();
                 newEx.folderId = newFolderId;
                 newEx.owner = currentUser.username;
-                db.exams.push(newEx); // Giữ nguyên 100% tên đề thi
+                db.exams.push(newEx); 
             });
             
-            switchView(10); 
-            await saveDBBackground(); 
+            saveDBBackground(); 
             
             customAlert(`Tuyệt vời! Đã copy thành công thư mục "${folderName}" và ${examsInFolder.length} đề thi vào tài khoản của bạn!`, "Thành công", () => {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -1053,7 +1071,6 @@ async function executeConfirm(actionStr = confirmAction) {
             switchView(0);
         }
     }
-    // XỬ LÝ CHIA SẺ 1 ĐỀ THI
     else if (actionStr === "acceptShare") {
         let sharedExam = db.exams.find(e => e.id === pendingShareId);
         if (sharedExam) {

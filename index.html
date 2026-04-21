@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TN - Trắc Nghiệm Thông Minh</title>
     <link rel="stylesheet" href="style.css">
+    
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
     <div id="mobileOverlay" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 1000;" onclick="closeAllMenus()"></div>
@@ -30,7 +37,7 @@
     </div>
 
     <div id="workspace">
-        <div class="header" id="mainHeader">
+        <div class="header" id="mainHeader" style="flex-shrink: 0;">
             <div class="d-flex nowrap" style="align-items: center;">
                 <button id="btnToggleSidebar" onclick="toggleSidebar()" title="Đóng/Mở thư mục">☰</button>
                 <div class="status" id="lblStatus">Trạng thái: Sẵn sàng</div>
@@ -47,17 +54,17 @@
             <div id="examContainer"></div>
         </div>
 
-        <div id="view-1" class="view" style="position: relative;">
-            <div style="border: 1px solid var(--n-border); border-radius: 8px; display: flex; flex-direction: column; flex-grow: 1; background: var(--n-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-                <div style="padding: 15px 20px; border-bottom: 1px solid var(--n-border);">
+        <div id="view-1" class="view">
+            <div style="border: 1px solid var(--n-border); border-radius: 8px; display: flex; flex-direction: column; flex: 1; min-height: 0; background: var(--n-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <div style="padding: 15px 20px; border-bottom: 1px solid var(--n-border); flex-shrink: 0;">
                     <input type="text" id="impTitle" placeholder="Tên đề thi..." style="width: 100%; border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; color: var(--n-text);">
                 </div>
-                <div class="split-pane">
-                    <div id="impPreview" style="flex: 1; padding: 20px; overflow-y: auto; border-right: 1px solid var(--n-border); background-color: var(--n-bg);"></div>
-                    <textarea id="impBody" style="flex: 1; padding: 20px; border: none; outline: none; resize: none; font-size: 14px; font-family: inherit; line-height: 1.6; background: transparent; color: var(--n-text);" placeholder="Nhập câu hỏi tại đây... (Ấn Enter để tự điền A, B, C, D)"></textarea>
+                <div class="split-pane" style="flex: 1; display: flex; min-height: 0; overflow: hidden; margin: 0; gap: 0;">
+                    <div id="impPreview" style="flex: 1; padding: 20px; overflow-y: auto; min-height: 0; border-right: 1px solid var(--n-border); background-color: var(--n-bg);"></div>
+                    <textarea id="impBody" style="flex: 1; padding: 20px; border: none; outline: none; resize: none; overflow-y: auto; min-height: 0; font-size: 14px; font-family: inherit; line-height: 1.6; background: transparent; color: var(--n-text);" placeholder="Nhập câu hỏi tại đây... (Có hỗ trợ gõ LaTeX kẹp trong dấu $)"></textarea>
                 </div>
             </div>
-            <div class="d-flex nowrap" style="position: sticky; bottom: -20px; background: var(--n-bg); padding: 15px 0; margin-top: 15px; border-top: 1px solid var(--n-border); z-index: 10; justify-content: center;">
+            <div class="d-flex nowrap" style="flex-shrink: 0; background: var(--n-bg); padding: 15px 0 0 0; margin-top: 15px; border-top: 1px solid var(--n-border); justify-content: center;">
                 <button class="btn btn-primary" style="padding: 10px 20px; width: 100%; max-width: 250px;" onclick="saveExam()">Lưu lại thay đổi</button>
                 <button class="btn" style="background: var(--n-bg); border: 1px solid var(--n-border); padding: 10px 20px; width: 100%; max-width: 250px;" onclick="switchView(0)">Hủy thay đổi</button>
             </div>
